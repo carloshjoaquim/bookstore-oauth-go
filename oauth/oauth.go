@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/carloshjoaquim/bookstore-oauth-go/oauth/errors"
-	"github.com/go-resty/resty"
+	"github.com/go-resty/resty/v2"
 	"net/http"
 	"strconv"
 	"strings"
