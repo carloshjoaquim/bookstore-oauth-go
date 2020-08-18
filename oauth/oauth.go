@@ -3,7 +3,7 @@ package oauth
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/carloshjoaquim/bookstore-oauth-go/oauth/errors"
+	"github.com/carloshjoaquim/bookstore-utils-go/rest_errors"
 	resty "github.com/go-resty/resty/v2"
 	"net/http"
 	"strconv"
@@ -23,7 +23,7 @@ var (
 		SetHostURL("http://localhost:8080").
 		SetHeader("Accept", "application/json").
 		SetHeader("Content-Type", "application/json").
-		SetTimeout(100 * time.Millisecond)
+		SetTimeout(1000 * time.Millisecond)
 )
 
 type oauthClient struct {
@@ -31,8 +31,8 @@ type oauthClient struct {
 
 type accessToken struct {
 	Id       string `json:"id"`
-	UserId   int64 `json:"user_id"`
-	ClientId int64 `json:"client_id"`
+	UserId   int64  `json:"user_id"`
+	ClientId int64  `json:"client_id"`
 }
 
 type oauthInterface interface {
@@ -46,7 +46,7 @@ func IsPublic(request *http.Request) bool {
 	return request.Header.Get(headerXPublic) == "true"
 }
 
-func AuthenticateRequest(request *http.Request) *errors.RestErr {
+func AuthenticateRequest(request *http.Request) *rest_errors.RestErr {
 	if request == nil {
 		return nil
 	}
@@ -66,7 +66,7 @@ func AuthenticateRequest(request *http.Request) *errors.RestErr {
 		return err
 	}
 
-	request.Header.Add(headerXCallerId, fmt.Sprintf("%v",at.UserId))
+	request.Header.Add(headerXCallerId, fmt.Sprintf("%v", at.UserId))
 	request.Header.Add(headerXClientId, fmt.Sprintf("%v", at.ClientId))
 
 	return nil
@@ -105,27 +105,29 @@ func cleanRequest(request *http.Request) {
 	request.Header.Del(headerXClientId)
 }
 
-func getAccessToken(accessTokenId string) (*accessToken, *errors.RestErr) {
+func getAccessToken(accessTokenId string) (*accessToken, *rest_errors.RestErr) {
 	response, err := oauthRestClient.R().Get(fmt.Sprintf("oauth/access_token/%s", accessTokenId))
 	if err != nil {
-		return nil, errors.NewInternalServerError("invalid restClient response when trying to get access_token")
+		return nil, rest_errors.NewInternalServerError("invalid restClient response when trying to get access_token",
+			rest_errors.NewError("rest_error"))
 	}
 
-	if response.StatusCode()  > 299 {
-		var restErr errors.RestErr
+	if response.StatusCode() > 299 {
+		var restErr rest_errors.RestErr
 
 		err := json.Unmarshal(response.Body(), &restErr)
 		if err != nil {
-			return nil, errors.NewInternalServerError("invalid error interface when trying to get access_token")
+			return nil, rest_errors.NewInternalServerError("invalid error interface when trying to get access_token",
+				rest_errors.NewError("rest_error"))
 		}
 		return nil, &restErr
 	}
 
 	var at accessToken
 	if err := json.Unmarshal(response.Body(), &at); err != nil {
-		return nil, errors.NewInternalServerError("error when trying to unmarshall access_token response")
+		return nil, rest_errors.NewInternalServerError("error when trying to unmarshall access_token response",
+			rest_errors.NewError("rest_error"))
 	}
 
 	return &at, nil
 }
-
